@@ -26,7 +26,7 @@ public class ServeurFact {
 	
 	public static void main(String argv[]){	
 		try {
-			port = Integer.parseInt(argv[1]);
+			port = Integer.parseInt(argv[0]);
 			cache = new ArrayList();
 			socket = new ServerSocket(port);
 		    Socket s = socket.accept(); //Accepte la connexion TCP
