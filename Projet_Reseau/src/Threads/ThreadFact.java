@@ -30,7 +30,8 @@ public class ThreadFact extends Thread{
 	 */
 	@Override
 	public void run(){
-		
+		if(entree == 0)
+			resultat = 1;
 	}
 	
 	/*

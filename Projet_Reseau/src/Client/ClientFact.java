@@ -39,6 +39,7 @@ public class ClientFact {
 	 */	
 	public ClientFact(String[] argv){
 		try {
+				nombreClients++;
 				adresse = InetAddress.getByName(argv[0]); //Recupere l'adresse ip
 				port = Integer.parseInt(argv[1]); //Recupere le port
 				socket = new Socket(adresse, port);
@@ -51,8 +52,12 @@ public class ClientFact {
 		}
 	}
 	
+	public ClientFact(String[] argv, int i) {
+		nombreClients++;
+	}
+
+
 	public static void main(String[] argv){
-		nombreClients++; //Si c'est le 1er client que l'on crée, on demande la valeur souhaitée, sinon on envoie une requete avec la valeurACalculer - 1
 		if(nombreClients == 1)
 		{
 			ClientFact client = new ClientFact(argv);
@@ -63,16 +68,24 @@ public class ClientFact {
 			    String msg;
 			    while (true) {
 			    	valeurACalculer = sc.nextInt();
-			        output.println(Integer.toString(valeurACalculer));
+			        output.println(Integer.toString(valeurACalculer)); //Envoi au serveur
 			      }
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
-		else; //TODO
-	    
-			
+		else
+		{
+			PrintStream output;
+			try {
+				output = new PrintStream(socket.getOutputStream());
+				output.println(Integer.toString(valeurACalculer - nombreClients+1));
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}			
+		}			
 	}
 
 }
