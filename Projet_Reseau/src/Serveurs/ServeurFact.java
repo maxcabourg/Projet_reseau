@@ -1,68 +1,75 @@
 package Serveurs;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
-import java.util.Scanner;
+// Chat.java
 
-import Client.ClientFact;
-import Threads.ThreadFact;
-/*
- * Classe representant un serveur capable de calculer une factorielle
- * @author Max Cabourg
- */
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
 public class ServeurFact {
-	
-	/*
-	 * Port sur lequel ecoute le serveur
-	 */
-	private static int port;
-	/*
-	 * Le cache contiendra les calculs déjà fait précédemment durant l'execution du serveur
-	 */
-	private static ArrayList cache;
-	/*
-	 * Le serveur en lui meme
-	 */
-	private static ServerSocket socket;
-	/*
-	 * Valeur a calculer
-	 */
-	private static int valeurInitiale;
-	/*
-	 * 
-	 */
-	private static ThreadFact tf;
-	private static int nbRequetes = 0;
-	
-	public static void main(String argv[]){	
-		try {
-			nbRequetes++;
-			if(nbRequetes == 1) //Initialisation du socket sur le 1er appel
-			{
-				port = Integer.parseInt(argv[0]); //Recupere le port a partir de la ligne de commande
-				cache = new ArrayList();
-				socket = new ServerSocket(port); //Le socket va ecouter le port passé en parametre
-				Socket s = socket.accept(); //Accepte la connexion TCP			
-				Scanner sc = new Scanner(s.getInputStream()); //Recupere le nombre envoye par le client
-				while (true) {
-				      String msg = sc.nextLine();
-				      System.out.println("Received: " + msg);
-				      valeurInitiale = Integer.parseInt(msg);
-				}//while
-			}
-			else
-			{
-				ClientFact client = new ClientFact(argv, valeurInitiale - nbRequetes); //Creation du nouveau client qui va calculer fact(n-1)
-			}
-		        
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	
 
-}
+    // Client part
+
+    class ClientThread extends Thread {
+    
+        Socket socket;
+        InputStream sInput;
+        OutputStream sOutput;
+        String name;
+    
+        ClientThread(Socket socket, String name) {
+	    try {
+	        this.socket = socket;
+	        sOutput = socket.getOutputStream();
+	        sInput  = socket.getInputStream();
+	        this.name = name;
+	    }//try
+	    catch (Exception e) {}
+        }//ClientThread
+
+        public void run() {
+            Scanner sc = new Scanner(sInput);
+            while (true)
+                if (sc.hasNext()) {
+                    String msg = sc.nextLine();
+                    System.out.println(name + ": " + msg);
+                }//if
+        }//run
+
+    }//ClientThread
+
+    // Server part
+    
+    //DONNEES MEMBRES
+    ArrayList<ClientThread> socks = new ArrayList<ClientThread>();
+    int port;
+    int num = 0;
+
+    ServeurFact(int port) {
+	this.port = port;
+    }//Chat
+    
+    void run() {
+	try {
+		    ServerSocket sServer = new ServerSocket(port); //Ecoute le port en question
+		    while (true) {
+				Socket s = sServer.accept(); //Accepte la connexion
+				ClientThread c = new ClientThread(s, "Thread " + num);
+				Scanner sc = new Scanner(s.getInputStream()); //Recupere le nombre envoye par le client
+				String msg = sc.nextLine();
+				System.out.println("J'ai recu: " + msg);
+				socks.add(c);
+				c.start();
+		}//while
+		
+	}//try
+	catch (Exception e) {}
+    }//run
+
+    public static void main(String [] argv) {
+    	ServeurFact c = new ServeurFact(Integer.parseInt(argv[0]));
+    	c.run();
+    }//main
+
+}//ChatServer
+	    
