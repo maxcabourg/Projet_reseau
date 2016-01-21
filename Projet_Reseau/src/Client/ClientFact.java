@@ -6,13 +6,15 @@ import java.util.*;
 import java.net.*;
 import java.io.*;
 
-class ClientFact {
+public class ClientFact{
 	
-	private int port;
-	private InetAddress adresse;
-	private Socket socket;
-	private int valeur;
+	private static int port;
+	private static InetAddress adresse;
+	private static Socket socket;
+	private static int valeurDepart;
+	private int valeurCourante;
 	private static int nombre_clients = 0;
+	private Listen l;
 
     class Listen extends Thread {
 
@@ -39,26 +41,56 @@ class ClientFact {
 
     }//Listen
 
-    void run() throws SocketException, IOException, UnknownHostException {
-        Listen l = new Listen(socket);
-        l.start();
-        if(nombre_clients == 1){
-	        PrintStream output = new PrintStream(socket.getOutputStream());
+    public void run() {
+        if(nombre_clients == 1){ //Quand on crée un seul client ca veut dire qu'on envoie la valeur de depart
+	        PrintStream output = null;
+			try {
+				output = new PrintStream(socket.getOutputStream());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        System.out.println("Tapez la valeur à envoyer");
 	        Scanner sc = new Scanner(System.in);
 	        String msg;
 	        while (true) {
 	        		msg = sc.nextLine();
-	        		valeur = Integer.parseInt(msg);
-	        		output.println("J'envoie au serveur la valeur : "+valeur);
+	        		valeurDepart = Integer.parseInt(msg);
+	        		output.println(valeurDepart);
 	        }//while        
     	}
+        else //Si c'est au moins le 2eme client, c'est qu'on vient du server
+        {
+        	PrintStream output = null;
+			try {
+				output = new PrintStream(socket.getOutputStream());
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+	        while (true) {
+	        		output.println(valeurCourante);
+	        }//while        
+        }
     }//run
     
-    ClientFact(InetAddress ad, int port) throws IOException{
+    public ClientFact(InetAddress ad, int port) throws IOException
+	{
     	adresse = ad;
     	this.port = port;
     	socket = new Socket(adresse, this.port);
-    	nombre_clients++;
+    	l = new Listen(socket);
+    	ClientFact.nombre_clients++;
+    	System.out.println("nombre clients : "+nombre_clients);
+    	l.start();
+	}
+    
+    public ClientFact()
+    {
+    	ClientFact.nombre_clients++;
+    	System.out.println("nombre clients : "+nombre_clients);
+    	valeurCourante = valeurDepart - nombre_clients + 1; //Ex on veut 4! si on a 2 clients la valeur courante sera 3	
+		this.run();
     }
 
     public static void main(String argv[]) {
@@ -69,4 +101,4 @@ class ClientFact {
         catch (Exception e) {}//catch
     }//main
 
-}//ChatClient
+}
