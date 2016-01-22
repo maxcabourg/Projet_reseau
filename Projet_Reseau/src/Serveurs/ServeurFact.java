@@ -1,8 +1,6 @@
 package Serveurs;
 
-// Chat.java
-
-import java.io.*;
+import java.io.PrintStream;
 import java.net.*;
 import java.util.*;
 
@@ -10,93 +8,90 @@ import Client.ClientFact;
 
 public class ServeurFact extends Thread{
 
-    // Client part
+	public static void main(String[] args) {
+		ServeurFact server = new ServeurFact(Integer.parseInt(args[0]));
+		server.start();
+	}
 
-    class ClientThread extends Thread {
-    
-        Socket socket;
-        InputStream sInput;
-        OutputStream sOutput;
-        String name;
-    
-        ClientThread(Socket socket, String name) {
-	    try {
-	        this.socket = socket;
-	        sOutput = socket.getOutputStream();
-	        sInput  = socket.getInputStream();
-	        this.name = name;
-	    }//try
-	    catch (Exception e) {}
-        }//ClientThread
+	private int port;
+	private HashMap<Integer,Integer> cache;
 
-        public void run() {
-            Scanner sc = new Scanner(sInput); //On recupere le flux d'entree
-            while (true)
-                if (sc.hasNext()) {
-                    String msg = sc.nextLine();
-                    System.out.println(name + ": " + msg);
-                }//if
-        }//run
+	private class ClientThread extends Thread{
 
-    }//ClientThread
+		private int port;
+		private Socket socket;
+		private int param;
+		private PrintStream sortie;
+		private HashMap<Integer,Integer> cache;
 
-    // Server part
-    
-    //DONNEES MEMBRES
-    private ArrayList<ClientThread> socks = new ArrayList<ClientThread>();
-    private Map<Integer, Integer> cache = new HashMap<>();
-    private int port;
-    private int nbRequetes = 0;
-    private int valeurDepart;
-    private int produit = 1;
 
-    ServeurFact(int port) {
-	this.port = port;
-    }//Chat
-    
-    @Override
-    public void run() {
-	try {
-		    ServerSocket sServer = new ServerSocket(port); //Ecoute le port en question
-		    while (true) {
-				Socket s = sServer.accept(); //Accepte la connexion
-				nbRequetes++;
-				Scanner sc = new Scanner(s.getInputStream()); //Recupere le nombre envoye par le client
-				String msg = sc.nextLine();
-				int nombre = Integer.parseInt(msg);
-				if(nbRequetes == 1)
-					valeurDepart = nombre;
-				if(cache.containsKey(valeurDepart)) //si on a deja sotcke la valeur
-				{
-					PrintStream output = new PrintStream(socks.get(0).sOutput);
-					output.println("Resultat : "+cache.get(valeurDepart));
-				}
-				if(nombre>1)
-				{
-					ClientThread c = new ClientThread(s, "Client");
-					socks.add(c);
-					System.out.println("J'ai recu: " + msg);
-					produit *= nombre;
-					System.out.println("Produit = "+produit);
-					new ClientFact();
+		public ClientThread(Socket socket,HashMap<Integer,Integer> cache,int port) throws Exception{
+			super();
+			this.socket = socket;
+			this.port=port;
+			Scanner entree = new Scanner(socket.getInputStream());
+			this.param = Integer.parseInt(entree.next());
+			this.sortie = new PrintStream(socket.getOutputStream());
+			this.cache=cache;
+
+		}
+
+		synchronized public void run(){
+			try{	
+				//Traitement de la demande
+				if(this.cache.containsKey(param)){//On a deja effectue le calcul
+					System.out.println("Factorielle de "+param+" vaut : "+this.cache.get(param));
 				}
 				else
 				{
-					cache.put(valeurDepart, produit);
-					PrintStream output = new PrintStream(socks.get(0).sOutput);
-					output.println("Resultat : "+produit);
+					if(param == 0)//Condition d'arrêt de récursivité
+						this.cache.put(0,1);	
+					else
+					{
+						//On crée un nouveau Client
+						ClientFact c = new ClientFact(Integer.toString(param-1),this.port,"localhost");
+						c.start();
+						while(c.getRetour()==null);
+						//On attends que le client ait sa réponse
+						this.cache.put(param,Integer.parseInt(c.getRetour())*param);//On remplit le cache			
+					}
 				}
-				s.close();
-		}//while
-		
-	}//try
-	catch (Exception e) {}
-    }//run
+				//Envoie au client et fermeture de la connexion
+				sortie.print(Integer.toString(this.cache.get(param))+"\n");
+				socket.close();
+			}catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+	}
 
-    public static void main(String [] argv) {
-    	ServeurFact c = new ServeurFact(Integer.parseInt(argv[0]));
-    	c.run();
-    }//main
 
-}//ChatServer
-	    
+	/*Server de la fonction de calcul Factorielle écoutant sur le port 50000
+	 * Paramètres:
+	 * 1, port sur lequel le serveur écoute
+	 */
+
+	public ServeurFact(int port){
+		super();
+		this.port = port;
+		this.cache = new HashMap<Integer,Integer>();
+
+	}
+
+
+	@SuppressWarnings("resource")
+	public void run(){
+		try{
+			ServerSocket serverSocket = new ServerSocket(port);
+			while(true)
+			{
+				Socket socket = serverSocket.accept();
+				ClientThread clientThread = new ClientThread(socket, cache, port);
+				clientThread.start();
+			}
+		}catch (Exception e){
+			e.printStackTrace();
+		}
+	}
+
+}
