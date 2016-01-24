@@ -71,14 +71,15 @@ public class ClientFact extends Thread{
 	 */
 	public void run(){
 		try {
-			//On envoie au nombre
+			//On envoie au serveur le nombre
 			PrintStream output = new PrintStream(socket.getOutputStream());
-			output.print(this.param+"\n");
+			output.println(param);
 			//Listener
 			InputStream input = socket.getInputStream();
 			Scanner sc = new Scanner(input);
 			String msg;
-			if(sc.hasNext()){
+			if(sc.hasNext())
+			{
 				msg = sc.nextLine();
 				System.out.println("Resultat: "+msg);
 				this.retour=msg;
